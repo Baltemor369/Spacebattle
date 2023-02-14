@@ -1,6 +1,14 @@
 import tkinter as tk, threading as th, time
 
 # img= tk.ImageTk.PhotoImage(tk.Image.open("download.png"))
+
+# task list :
+# + make randomly spawning of ennemy (infity mode)
+# + make boss 
+# + make score
+# + escape key
+# + start exit param mode buttons
+
 class Coord():
     def __init__(self,x=0,y=0):
         self.x=x
@@ -50,6 +58,10 @@ class Sprite():
         self.h=heigth
     def set_speed(self,speed:int):
         self.speed=speed
+    def set_x(self,val:int):
+        self.pos.set_x(val)
+    def set_y(self,val:int):
+        self.pos.set_y(val)
     
     def move_up(self):
         self.pos.set_y(self.get_pos().get_y()-self.get_speed())
@@ -81,105 +93,191 @@ class Spacebattle(tk.Tk):
 
         self.missile_w=20
         self.missile_h=30
-        self.missile=[Sprite(self.missile_w,self.missile_h,2,Coord(self.player.get_x()+self.player_size/2,self.player.get_y()-self.missile_h))]
+        self.missile=[]
         self.missile_struct=[]
-        # Coord(self.player.get_x()+self.player_size/2,self.player.get_y()-self.missile_h)
-
+        
         self.ennemy_size=50
         self.ennemy=[Sprite(self.ennemy_size,self.ennemy_size,1/5,Coord((self.can_w-self.ennemy_size)/2,0))]
         self.ennemy_struct=[self.canva.create_rectangle(self.ennemy[0].get_x(),self.ennemy[0].get_y(),self.ennemy[0].get_x()+self.ennemy[0].get_width(),self.ennemy[0].get_y()+self.ennemy[0].get_heigth(),fill="black")]
 
-
+        self.clock=list
+        
         self.move_up=False
         self.move_left=False
         self.move_down=False
         self.move_right=False
+        # self.fire_ready=False
 
         self.bind("<KeyPress>",self.move)
         self.bind("<KeyRelease>",self.unmove)
+        self.bind("<space>",self.fire)
 
+    def run(self):
         self.game()
 
     def game(self):
-        # Event player(move, fire)
-        if self.move_up:
+        # player move management
+        if self.out(self.player).find("U")==-1 and self.move_up:
             self.player.move_up()
-        if self.move_right:
+        if self.out(self.player).find("R")==-1 and self.move_right:
             self.player.move_right()
-        if self.move_down:
+        if self.out(self.player).find("D")==-1 and self.move_down:
             self.player.move_down()
-        if self.move_left:
+        if self.out(self.player).find("L")==-1 and self.move_left:
             self.player.move_left()
+        
+        # canva update
         self.canva.moveto(self.player_struct,self.player.get_x(),self.player.get_y())
 
-        # Collision(Player-IA,Missile-IA)
+        # collision between player and ennemys management
         for elt in self.ennemy:
             if collision(self.player,elt):
                 self.endgame=True
         
-        # for elt in self.missile:
+        # collision between missiles and ennemy management
+        for miss in range(0,len(self.missile)):
+            for enn in range(0,len(self.ennemy)):
+                if collision(self.missile[miss],self.ennemy[enn]):
+                    self.canva.delete(self.missile_struct[miss])
+                    self.canva.delete(self.ennemy_struct[enn])
+                    self.del_ennemy(enn)
+                    self.del_missile(miss)
+        
+        # missile move management
+        i=0
+        for elt in self.missile:
+            elt.move_up()
+            # canva update
+            self.canva.moveto(self.missile_struct[i],elt.get_x(),elt.get_y())
+            i+=1
 
-        # Event IA(moving)
+        # spawn ennemy every 3s, synchronize with the clock 
+        if ennemy_spawn.is_set():
+            self.gen_ennemy()
+            ennemy_spawn.clear()
+
+        # ennemy move management
+        i=0
         for elt in self.ennemy:
             elt.move_down()
+            # ennemy elts out of the canva are delete
+            if elt.get_y()>self.can_h:
+                self.del_ennemy(i)
+            i+=1
+        # canva update
         for i in range(0,len(self.ennemy_struct)):
             self.canva.moveto(self.ennemy_struct[i],self.ennemy[i].get_x(),self.ennemy[i].get_y())
 
+        # loop funtion
         if not self.endgame:
             self.after(1,self.game)
     
     def move(self,event):
         if event.keysym=="z":
-            if not self.move_down:
                 self.move_up= True
         elif event.keysym=="q":
-            if not self.move_right:
                 self.move_left = True
         elif event.keysym=="s":
-            if not self.move_up:
                 self.move_down= True
         elif event.keysym=="d": 
-            if not self.move_left:
                 self.move_right = True
     
     def unmove(self,event):
         if event.keysym=="z":
-            if not self.move_down:
                 self.move_up=False
         elif event.keysym=="q":
-            if not self.move_right:
                 self.move_left =False
         elif event.keysym=="s":
-            if not self.move_up:
                 self.move_down=False
         elif event.keysym=="d": 
-            if not self.move_left:
                 self.move_right =False
 
-        
-    def fire(self):
-        self.missile_struct.append(self.canva.create_rectangle(self.missile.get_pos().get_x()))
+    def fire(self,event):
+        if missile_ready.is_set():
+            self.gen_missile()
+            missile_ready.clear()
 
-class Timer(th.Thread):
-    def __init__(self,time:int):
+    def gen_missile(self):# add elts to generate a missile
+        self.missile.append(Sprite(10,30,1,Coord(self.player.get_x()+(self.player.get_width())/2,self.player.get_y()-self.missile_h)))
+        self.missile_struct.append(self.canva.create_rectangle(self.missile[-1].get_x(),self.missile[-1].get_y(),self.missile[-1].get_x()+self.missile[-1].get_width() ,self.missile[-1].get_y()+self.missile[-1].get_heigth(),fill="orange"))
+         
+    def gen_ennemy(self):# add elts to generate a ennemy
+        self.ennemy.append(Sprite(self.ennemy_size,self.ennemy_size,1/5,Coord((self.can_w-self.ennemy_size)/2,-self.ennemy_size)))
+        self.ennemy_struct.append(self.canva.create_rectangle(self.ennemy[0].get_x(),self.ennemy[0].get_y(),self.ennemy[0].get_x()+self.ennemy[0].get_width(),self.ennemy[0].get_y()+self.ennemy[0].get_heigth(),fill="black"))
+    
+    def del_ennemy(self,ind:int):
+        self.ennemy.pop(ind)
+        self.ennemy_struct.pop(ind)
+    
+    def del_missile(self,ind:int):
+        self.missile.pop(ind)
+        self.missile_struct.pop(ind)
+
+    def out(self,sp:Sprite):
+        buff=""
+        if sp.get_x()<=0 :
+             buff+="L"
+        if sp.get_y()<=0 :
+             buff+="U"
+        if sp.get_x()+sp.get_width()>=self.can_w :
+             buff+="R"
+        if sp.get_y()+sp.get_heigth()>=self.can_h:
+             buff+="D"
+        return buff
+
+class Clock(th.Thread):
+    def __init__(self):
         th.Thread.__init__(self)
-        self.stop=True
-        self.time=time
+        self.time=0
+        self.stop=False
 
     def run(self):
-        while self.time!=0:
-            time.sleep(1/self.speed)
-            self.time-=1
+        while not self.stop:
+            self.time+=0.5
+            time.sleep(0.5)
+            if self.time%3==0:
+                ennemy_spawn.set()
+            if self.time%1==0:
+                missile_ready.set()
 
-def collision(sp1:Sprite,sp2:Sprite):
-    if sp1.get_x()>=sp2.get_x() and sp1.get_x()<=sp2.get_x()+sp2.get_width():
-        if sp1.get_y()>=sp2.get_y() and sp1.get_y()<=sp2.get_y()+sp2.get_heigth():
+    def exit(self):
+        self.stop=True
+
+class Game(th.Thread):
+    def __init__(self):
+        th.Thread.__init__(self)
+        self.spacebattle=Spacebattle()
+        self.clock=Clock()
+
+    def run(self):
+        self.spacebattle.run()
+        self.clock.run()
+
+def between(nb:int,start:int,end:int):
+    if start<=end:
+        if nb >= start and nb <= end:
             return True
-    if sp1.get_x()+sp1.get_width()>=sp2.get_x() and sp1.get_x()+sp1.get_width()<=sp2.get_x()+sp2.get_width():
-        if sp1.get_y()+sp1.get_heigth()>=sp2.get_y() and sp1.get_y()+sp1.get_heigth()<=sp2.get_y()+sp2.get_heigth():
+    else:
+         if nb <= start and nb >= end:
             return True
     return False
 
-game=Spacebattle()
-game.start()
-game.mainloop()
+def collision(sp1:Sprite,sp2:Sprite):
+    if between(sp1.get_x(),sp2.get_x(),sp2.get_x()+sp2.get_width()):
+        if between(sp1.get_y(),sp2.get_y(),sp2.get_y()+sp2.get_heigth()):
+            return True
+    if between(sp1.get_x()+sp1.get_width(),sp2.get_x(),sp2.get_x()+sp2.get_width()):
+        if between(sp1.get_y()+sp1.get_heigth(),sp2.get_y(),sp2.get_y()+sp2.get_heigth()):
+            return True
+    return False
+
+missile_ready=th.Event()
+missile_ready.set()
+ennemy_spawn=th.Event()
+respawn_player=th.Event()
+
+var=Game()
+var.start()
+var.spacebattle.mainloop()
+var.clock.exit()
+var._stop()
