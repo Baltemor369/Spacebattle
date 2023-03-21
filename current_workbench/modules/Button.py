@@ -9,7 +9,12 @@ LIGHT_GREY = (200,200,200)
 class Button:
     font = pygame.font.Font(None, 20)
 
-    def __init__(self, w:int, h:int, x:int, y:int, txt:str) -> None:
+    def __init__(self, w:int, h:int, x:int, y:int, txt:str,
+                 bg:tuple=LIGHT_GREY,
+                 fg:tuple=BLACK,
+                 border_color:tuple=BLACK
+                 ) -> None:
+        
         # Create the Surface
         self.surface = pygame.Surface((w,h))
         

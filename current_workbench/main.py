@@ -2,9 +2,6 @@ from modules.UI import Spacebattle
 
 
 # TODO List :
-# + button start sur le côté qui disparait lorsqu'on lance le jeu, remplacer par le score *
-# + button exit qui quitte la fenêtre (en bas a droite) *
-
 # + certain vaisseau ennemy recule d'un cran arriver en bas de la fenetre
 # + ajouter capacité d'amélioration d'arme et armure
 # + ajouter apparition de bonus
@@ -13,7 +10,7 @@ from modules.UI import Spacebattle
 
 
 # Key use :q
-# ZQSD : move
+# Z-Q-S-D : move Up-Left-Down-Right
 # SPACE : fire
 # Escape : pause
 
