@@ -1,19 +1,26 @@
-from modules.UI import Spacebattle
+from modules.MangaUI import UI
+import os
 
+# build executable : pyinstaller --name MangaManager --noconsole --onefile --add-data "asset/*:asset" --path asset modules main.py
 
-# TODO List :
-# + certain vaisseau ennemy recule d'un cran arriver en bas de la fenetre
-# + ajouter capacité d'amélioration d'arme et armure
-# + ajouter apparition de bonus
-# + ajouter des boss
-# + refaire la methode de spawn ennemy
+# To do :
+# + refaire affichage statistique
+# + développer module historique(moyenne par semaine/mois voir combien ont été ajout pendant une semaine donnée)
+# + multiple delete && button "undo"
+# + proposer une couleur de fonds par nom de manga
+# + rendre la réécriture plus optimisée
 
+# if folder doesn't exist, create it
+if not os.path.exists("data"):
+    os.mkdir("data")
 
-# Key use :q
-# Z-Q-S-D : move Up-Left-Down-Right
-# SPACE : fire
-# Escape : pause
+# if file doesn't exist, create it
+if not os.path.exists("data/backup.txt"):
+    os.system("type nul > data/backup.txt")
 
-if __name__ == "__main__":
-    game = Spacebattle()
-    # game.run()
+# if file doesn't exist, create it
+if not os.path.exists("data/data.txt"):
+    os.system("type nul > data/data.txt")
+
+ui = UI()
+ui.mainloop()
