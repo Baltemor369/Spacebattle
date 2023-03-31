@@ -1,21 +1,22 @@
-import pygame
+from pygame import Rect, image, sprite
 from typing import Union
 
-class Sprite(pygame.sprite.Sprite):
+class Sprite(sprite.Sprite):
     
-    def __init__(self, path:str, velocity:float, coord:Union[tuple[int,int], pygame.Rect], display:bool=True) -> None:
+    def __init__(self, path:str, velocity:float, coord:Union[tuple[float,float], Rect], display:bool=True) -> None:
         super().__init__()
         
-        self.img = pygame.image.load(path)
+        self.img = image.load(path)
         self.display = display
         self.velocity = velocity
         self.rect = self.img.get_rect()
+        self.collable = True
 
         if type(coord) == tuple:
             self.rect.x = coord[0]
             self.rect.y = coord[1]
             
-        elif type(coord) == type(pygame.Rect):
+        elif type(coord) == type(Rect):
             self.rect.x = coord.x
             self.rect.y = coord.y
 
@@ -28,9 +29,13 @@ class Sprite(pygame.sprite.Sprite):
     def move_right(self) -> None:
         self.rect.x += self.velocity
     
-    def set_pos(self, x:int, y:int) -> None:
-        self.rect.x = x
-        self.rect.y = y
+    def set_pos(self, pos:Union[tuple[float,float],Rect]) -> None:
+        if type(pos) == tuple:
+            self.rect.x = pos[0]
+            self.rect.y = pos[1]
+        else:
+            self.rect.x = pos.x
+            self.rect.y = pos.y
 
-    def get_pos(self) -> tuple[int, int]:
+    def get_pos(self) -> tuple[float, float]:
         return (self.rect.x, self.rect.y)
