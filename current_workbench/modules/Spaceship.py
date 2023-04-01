@@ -1,26 +1,44 @@
 
 from typing import List,Union
 from pygame import time,Rect
-import modules.Sprite as Sprite
-import modules.Skills as Skills
+from modules.Sprite import Sprite
+from modules.Skills import Skills
 
 TORPEDO_SIZE = 16
 
 
-class Spaceship(Sprite.Sprite, Skills.Skills):
+class Spaceship(Sprite, Skills):
+    """ This class is used to create a special Sprite with skills and abilities."""
+    
     # Basic stats
     HP_bonus = 50
     velocity_bonus = 1
     att_speed_bonus = 100
     att_velocity_bonus = 1
-    torpedo_damage_bonus = 50
-    torpedo_piercing_bonus = 1
-                                                # path, pos, HP_max, velocity, att_speed, att_velocity, torpedo_damage, torpedo_piercing, display]
+    damage_bonus = 50
+    piercing_bonus = 1
+                                                # path, pos, HP_max, velocity, att_speed, att_velocity, damage, piercing, display]
     def __init__(self, args:Union[object, list]) -> None:
+        """
+        Initializes a new object of the Padding class.
 
+        args:
+            args (Spaceship) : a other instance of class Spaceship to initialize this one.
+            args (list): list of arguments to initialize.
+        
+        list args:
+            path (str): access path to the picture for the Sprite.
+            pos (tuple | Rect): position of the Sprite on the screen, tuple(x,y) or pygame.Rect.
+            HP_max (int): maximum HP of the Sprite.
+            velocity (int): velocity of the Sprite.
+            att_speed (int): attack speed of the Sprite.
+            att_velocity (int): attack's velocity of the Sprite.
+            damage (int): damage of the Sprite.
+            piercing (int): number of elements that can be passed through before exploding.
+        """
         if type(args) == list:
-            Sprite.Sprite.__init__(self, args[0], args[3], args[1], display=args[8])
-            Skills.Skills.__init__(self, args[2], args[4], args[5], args[6], args[7])
+            Sprite.__init__(self, args[0], args[3], args[1], display=args[8])
+            Skills.__init__(self, args[2], args[4], args[5], args[6], args[7])
 
             self.HP = self.HP_max
             self.torpedo:List[Torpedo] = []
@@ -28,62 +46,132 @@ class Spaceship(Sprite.Sprite, Skills.Skills):
             self.last_collision = 0
         else:
             self.__dict__.update(args.__dict__)
-        
 
-    def fire(self):
+    def fire(self, direction:str):
+        """
+        Fires a torpedo in the given direction.
+        
+        args:
+            direction (str): direction of the torpedo (up-down-left-right).
+
+        """
         if time.get_ticks() - self.last_fire_time >= self.att_speed:
             self.torpedo.append(Torpedo("assets/torpedo.png",
                                         self.att_velocity,
                                         (self.rect.x + (self.rect.w - TORPEDO_SIZE) / 2, self.rect.y),
-                                        self.torpedo_damage,
-                                        self.torpedo_piercing,
-                                        True
+                                        self.damage,
+                                        self.piercing,
+                                        True,
+                                        direction
                                         )
                                 )
             self.last_fire_time = time.get_ticks()
     
     def take_damage(self, damage:int) -> None:
+        """
+        Takes damage and decreases HP.
+
+        args:
+            damage (int): amount of damage to take.
+        """
         self.HP -= damage
         if self.HP < 0:
             self.HP = 0
 
     def HP_upgrade(self):
+        """
+        Increases HP by HP_bonus.
+        """
         self.HP_max += Spaceship.HP_bonus
     
     def velocity_upgrade(self):
+        """
+        Increases velocity by velocity_bonus.
+        """
         self.velocity += Spaceship.velocity_bonus
     
     def att_speed_upgrade(self):
+        """
+        Increases velocity by att_speed_bonus.
+        """
         self.att_speed += Spaceship.att_speed_bonus
     
     def att_velo_upgrade(self):
+        """
+        Increases velocity by att_velocity_bonus.
+        """
         self.att_velocity += Spaceship.att_velocity_bonus
     
     def damage_upgrade(self):
-        self.torpedo_damage += Spaceship.torpedo_damage_bonus
+        """
+        Increases velocity by damage_bonus.
+        """
+        self.damage += Spaceship.damage_bonus
     
     def piercing_upgrade(self):
-        self.torpedo_piercing += Spaceship.torpedo_piercing_bonus
+        """
+        Increases velocity by piercing_bonus.
+        """
+        self.piercing += Spaceship.piercing_bonus
 
-
-class Torpedo(Sprite.Sprite):
-
+    def manage_torpedo(self):
+        """
+        Manages torpedoes movement.
+        """
+        for elt in self.torpedo:
+            elt.move()
+class Torpedo(Sprite):
+    """ This class is used for creating Sprite able to deal damage to other Sprite"""
     def __init__(self,
                  path:str,
                  velocity:float,
                  pos:Union[tuple[float,float],Rect],
                  damage:int,
                  piercing:int,
-                 disp:bool
+                 disp:bool,
+                 dir:str
                  ) -> None:
-        
+        """
+        Initilize a new object of Torpedo class.
+
+        args:
+            path (str): acces path to the image of the torpedo.
+            velocity (int): the velocity of the torpedo.
+            pos (tuple | Rect): position  of the torpedo type of tuple(x,y) or a Rect object.
+            damage (int): damage amount of the torpedo.
+            piercing (int): number of elements that can be passed through before exploding.
+            disp (boll): if the torpedo is displayed or not.
+            dir (str): direction of the torpedo (up-down-left-right).
+        """
         super().__init__(path, velocity, pos, disp)
 
+        self.dir = dir.lower()
         self.damage = damage
         self.piercing = piercing
     
     def move(self):
-        self.move_up()
+        """
+        Move the torpedo according to self.dir.
+        """
+        match self.dir:
+            case "up":
+                self.move_up()
+            case "down":
+                self.move_down()
+            case "left":
+                self.move_left()
+            case "right":
+                self.move_right()
+    
+    def change_fir(self, dir:str):
+        """
+        Change the direction of the torpedo.
+        """
+        if dir.lower() in ["up","down","left","right"]:
+            self.dir = dir.lower()
     
     def collision(self):
+        """
+        decrease self.piercing cause of one collision.
+        """
         self.piercing -= 1

@@ -23,6 +23,9 @@ PLAYER_DMG = 100
 
 class Spacebattle:
     def __init__(self) -> None:
+        """
+        Initialize the Spacebattle game.
+        """
         pygame.init()
         pygame.display.set_caption("Spacebattle")
         
@@ -33,7 +36,7 @@ class Spacebattle:
         
         # surface for the game
         self.game_surface = screen.subsurface(pygame.Rect(0,0,GAME_WIDTH,GAME_HEIGHT))
-        self.game_surface.fill(RGB("navy"))
+        # self.game_surface.fill(RGB("dark navy"))
 
         # surface for score, menu, and other
         self.menu_surface = screen.subsurface(pygame.Rect(GAME_WIDTH,
@@ -42,25 +45,38 @@ class Spacebattle:
                                                           SCREEN_HEIGHT
                                                           )
                                               )
-        self.menu_surface.fill(RGB("white"))
+        # self.menu_surface.fill(RGB("white"))
         
         # button "start"
         x = self.menu_surface.get_width() / 2 - 50 / 2
         y = 20
         self.start_button = Label(root_surface=self.menu_surface,
                                   txt="Start",
-                                  coord=(x,y),
+                                  topleft=(x,y),
                                   size=(50,30),
                                   padding=(10,10,10,10),
                                   bg=RGB("gray"),
-                                  fg=RGB("black"))
+                                  fg=RGB("black"),
+                                  border_size=2)
+
+        # button "param"
+        x = self.menu_surface.get_width() / 2 - 50 / 2
+        y = self.menu_surface.get_height() - 100
+        self.param_button = Label(root_surface=self.menu_surface,
+                                  txt="param",
+                                  topleft=(x,y),
+                                  size=(50,30),
+                                  padding=(10,10,10,10),
+                                  bg=RGB("gray"),
+                                  fg=RGB("black"),
+                                  border_size=2)
 
         # button "exit"
         x = self.menu_surface.get_width() / 2 - 50 / 2
         y = self.menu_surface.get_height() - 20 - 30 # 20 = padding 30 = height of the label
         self.exit_button = Label(root_surface=self.menu_surface,
                                  txt="Exit",
-                                 coord=(x,y),
+                                 topleft=(x,y),
                                  size=(50,30),
                                  padding=(10,10,10,10),
                                  fg=RGB("black"),
@@ -68,7 +84,6 @@ class Spacebattle:
                                  border_color=RGB("black"),
                                  border_size=2)
 
-        self.player_stellor = 0
         self.player = Spaceship(["assets/spaceship.png",
                                 ((GAME_WIDTH - SHIP_SIZE) / 2, GAME_HEIGHT - 100),
                                 100,
@@ -80,16 +95,22 @@ class Spacebattle:
                                 True]
                                 )
 
+        self.player_stellor = 0
+        self.difficuly = 1
+
         self.init_game()
 
         self.run_menu()
     
     def init_game(self):
+        """ Initializes data for the game """
+
 
         # Var declaration
         self.running = True
         self.score = START_SCORE
         self.last_spawn_ennemy = 0
+        self.last_ennemy_fire = 0
         self.fps = pygame.time.Clock()
         self.font = pygame.font.Font(None,20)
         self.pause = False
@@ -116,7 +137,7 @@ class Spacebattle:
                               )
         self.boss_life_bar = Label(root_surface=self.game_surface,
                                    txt="",
-                                   coord=(5,5),
+                                   topleft=(5,5),
                                    size=(0,0),
                                    bg=(255,0,0),
                                    fg=(220,0,0),
@@ -177,14 +198,14 @@ class Spacebattle:
 
     def menu_display(self):
         self.menu_surface.fill(RGB("white"))
-        self.game_surface.fill(RGB("navy"))
+        self.game_surface.fill(RGB("dark navy"))
     
         self.menu_surface.blit(self.start_button.surface, self.start_button.rect)
         
         x = 5
         y = 60
         stellor = Label(root_surface=self.game_surface,
-                        coord=(x,y),
+                        topleft=(x,y),
                         txt=f"Stellor : {self.player_stellor}\nStellor = Galactic currency",
                         fg=RGB("black"),
                         border_color=RGB("white"),
@@ -193,6 +214,8 @@ class Spacebattle:
         self.menu_surface.blit(stellor.surface, stellor.rect)
 
         self.skill_menu(self.menu_surface)
+
+        self.menu_surface.blit(self.param_button.surface, self.param_button.rect)
 
         self.menu_surface.blit(self.exit_button.surface, self.exit_button.rect)
 
@@ -263,7 +286,7 @@ class Spacebattle:
                     self.player.move_up()
 
             if keys[pygame.K_SPACE]:
-                self.player.fire()
+                self.player.fire("up")
 
     def update(self) -> None:
 
@@ -273,6 +296,7 @@ class Spacebattle:
             # set the next stage for the next boss
             self.boss.display = True
 
+            # boss life bar update
             self.boss_life_bar.display = True
             self.boss_life_bar.resize((self.boss.HP * (GAME_WIDTH - 10)) / self.boss.HP_max, 10)
             
@@ -282,22 +306,28 @@ class Spacebattle:
             # set new boss appearence
             self.next_stage *= 2
             
-        #  not boss phase
+        #  ennemy phase 
         if not self.boss.display:
-
+            # generation of ennemys
             if pygame.time.get_ticks() - self.last_spawn_ennemy >= 500:
                 self.ennemy_spawn()
                 self.last_spawn_ennemy = pygame.time.get_ticks()
+            
+            # ennemy fire
+            if pygame.time.get_ticks() - self.last_ennemy_fire >= 3000:
+                self.ennemys[random.randrange(0,len(self.ennemys))].fire("down")
 
         # boss phase
         else:
-            
+            # boss move
             if self.boss.rect.y < 10:
-
                 self.boss.move_down()
+
+            # player & boss collision
             if self.boss.rect.colliderect(self.player.rect):
                 self.running = False
-            # boss torpedo algo :
+            
+            # boss fire
 
         # ennemy move management
         for elt in self.ennemys:
@@ -313,8 +343,8 @@ class Spacebattle:
                 self.player.take_damage(elt.HP_max)
 
         # torpedo move managements
+        self.player.manage_torpedo()
         for elt in self.player.torpedo:
-            elt.move()
 
             # out map
             if elt.rect.y <= -TORPEDO_SIZE:
@@ -377,7 +407,7 @@ class Spacebattle:
     def display(self) -> None:
         
         # game surface update
-        self.game_surface.fill(RGB("navy"))
+        self.game_surface.fill(RGB("dark navy"))
         
         for elt in self.player.torpedo:
             if elt.display:
@@ -467,23 +497,20 @@ class Spacebattle:
             self.ennemys.append(buffer_ennemy)
 
     def skill_menu(self, surface:pygame.Surface):
-        button_x = MENU_WIDTH-50
+        button_x = MENU_WIDTH - 30
         button_y = 120
-        label_w = 130
-        label_x = (MENU_WIDTH-label_w)/2
-        button_size = 30
+        label_x = 40
 
         # skills div
         lvl = (self.player.HP_max - 100) // Spaceship.HP_bonus + 1
         HP_label = Label(root_surface=self.menu_surface,
                          txt=f"HP max, lvl {lvl}\n{lvl * 1000} Stellor",
-                         coord=(label_x,button_y),
+                         topleft=(label_x,button_y),
                          border_color=None)
         
         self.HP_up_B = Label(root_surface=self.menu_surface,
-                           coord=(button_x,button_y),
+                           topleft=(button_x,button_y),
                            txt="+",
-                           size=(button_size,button_size),
                            padding=(5,5,5,5),
                            bg=RGB("gray"),
                            fg=RGB("black"))
@@ -491,14 +518,13 @@ class Spacebattle:
         button_y += 50
         lvl = (self.player.velocity - 2) // Spaceship.velocity_bonus + 1
         velocity_label = Label(root_surface=self.menu_surface,
-                            coord=(label_x, button_y),
+                            topleft=(label_x, button_y),
                             txt=f"Speed, lvl {lvl}\n{lvl * 1000} Stellor",
                           border_color=None)
         
         self.velocity_up_B = Label(root_surface=self.menu_surface,
-                           coord=(button_x,button_y),
+                           topleft=(button_x,button_y),
                            txt="+",
-                           size=(button_size,button_size),
                            padding=(5,5,5,5),
                            bg=RGB("gray"),
                            fg=RGB("black"))
@@ -506,59 +532,55 @@ class Spacebattle:
         button_y += 50
         lvl = (self.player.att_speed - 800) // Spaceship.att_speed_bonus + 1
         att_speed_label = Label(root_surface=self.menu_surface,
-                                coord=(label_x, button_y),
+                                topleft=(label_x, button_y),
                                 txt=f"Speed Att, lvl {lvl}\n{lvl * 1000} Stellor",
                                 border_color=None)
         
         self.att_speed_up_B = Label(root_surface=self.menu_surface,
-                           coord=(button_x,button_y),
-                           txt="+",
-                           size=(button_size,button_size),
-                           padding=(5,5,5,5),
-                           bg=RGB("gray"),
-                           fg=RGB("black"))
+                                    topleft=(button_x,button_y),
+                                    txt="+",
+                                    padding=(5,5,5,5),
+                                    bg=RGB("gray"),
+                                    fg=RGB("black"))
 
         button_y += 50
         lvl = (self.player.att_velocity - 8) // Spaceship.att_velocity_bonus + 1
         att_velo_label = Label(root_surface=self.menu_surface,
-                               coord=(label_x, button_y),
+                               topleft=(label_x, button_y),
                                txt=f"Velocity Att, lvl {lvl}\n{lvl * 1000} Stellor",
-                          border_color=None)
+                               border_color=None)
         
         self.att_velo_up_B = Label(root_surface=self.menu_surface,
-                           coord=(button_x,button_y),
+                           topleft=(button_x,button_y),
                            txt="+",
-                           size=(button_size,button_size),
                            padding=(5,5,5,5),
                            bg=RGB("gray"),
                            fg=RGB("black"))
 
         button_y += 50
-        lvl = (self.player.torpedo_damage - 100) // Spaceship.torpedo_damage_bonus + 1
+        lvl = (self.player.damage - 100) // Spaceship.damage_bonus + 1
         att_label = Label(root_surface=self.menu_surface,
-                          coord=(label_x, button_y),
+                          topleft=(label_x, button_y),
                           txt=f"Damage, lvl {lvl}\n{lvl * 1000} Stellor",
                           border_color=None)
         
         self.att_up_B = Label(root_surface=self.menu_surface,
-                           coord=(button_x,button_y),
+                           topleft=(button_x,button_y),
                            txt="+",
-                           size=(button_size,button_size),
                            padding=(5,5,5,5),
                            bg=RGB("gray"),
                            fg=RGB("black"))
 
         button_y += 50
-        lvl = (self.player.torpedo_piercing - 1) // Spaceship.torpedo_piercing_bonus + 1
+        lvl = (self.player.piercing - 1) // Spaceship.piercing_bonus + 1
         piercing_label = Label(root_surface=self.menu_surface,
-                               coord=(label_x, button_y),
+                               topleft=(label_x, button_y),
                                txt=f"Piercing, lvl {lvl}\n{lvl * 1000} Stellor",
                                border_color=None)
         
         self.piercing_up_B = Label(root_surface=self.menu_surface,
-                           coord=(button_x,button_y),
+                           topleft=(button_x,button_y),
                            txt="+",
-                           size=(button_size,button_size),
                            padding=(5,5,5,5),
                            bg=RGB("gray"),
                            fg=RGB("black"))
