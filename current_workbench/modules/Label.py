@@ -13,7 +13,7 @@ class Label:
 
     def __init__(self,
                  root_surface:pygame.Surface,
-                 txt:str,
+                 txt:Union[str,list[str]],
                  topleft:Union[tuple, pygame.Rect, None]=None,
                  topright:Union[tuple, pygame.Rect, None]=None,
                  bottomleft:Union[tuple, pygame.Rect, None]=None,
@@ -32,7 +32,7 @@ class Label:
 
         args:
             root_surface (pygame.Surface): The surface that the label will be drawn on.
-            txt (str): The text that will be displayed.
+            txt (str | list): The text that will be displayed, str or a list of strings.
             topleft (tuple, pygame.Rect, None): The top left position of the label, a tuple(x,y) or pygame.Rect object.
             topright (tuple, pygame.Rect, None): The top right position of the label, a tuple(x,y) or pygame.Rect object.
             bottomleft (tuple, pygame.Rect, None): The bottom left position of the label, a tuple(x,y) or pygame.Rect object.
@@ -49,8 +49,11 @@ class Label:
         
         self.root_s = root_surface
         self.size = size
-        self._txt = txt.split("\n")
-        self.align = text_align
+        if type(txt) == str:
+            self._txt = txt.split("\n")
+        else:
+            self._txt = txt
+        self._align = text_align
         
         if bg is None:
             self._bg = pygame.SRCALPHA
@@ -119,13 +122,13 @@ class Label:
             else:
                 self.rect.bottomleft = (0,0)
         
-        elif bottomleft is not None:
-            if type(bottomleft) == tuple:
-                self.rect.bottomleft = bottomleft
-            elif type(bottomleft) == pygame.Rect:
-                self.rect.bottomleft = bottomleft.bottomleft
+        elif bottomright is not None:
+            if type(bottomright) == tuple:
+                self.rect.bottomright = bottomright
+            elif type(bottomright) == pygame.Rect:
+                self.rect.bottomright = bottomright.bottomright
             else:
-                self.rect.bottomleft = (0,0)
+                self.rect.bottomright = (0,0)
         
 
         for i,line in enumerate(self._txt):
@@ -135,13 +138,13 @@ class Label:
             # Create a rect for the text
             size = (self.size[0] - self._padding.left - self._padding.right,
                     self.size[1] - self._padding.top - self._padding.bottom)
-            if self.align == "center":
+            if self._align == "center":
                 x = self._padding.left + (size[0] - text_surface.get_width())/2
                 y = self._padding.top + i * text_surface.get_height()
-            elif self.align == "left":
+            elif self._align == "left":
                 x = self._padding.left
                 y = self._padding.top + i * text_surface.get_height()
-            elif self.align == "right":
+            elif self._align == "right":
                 x = self.size[0] - self._padding.right - text_surface.get_width()
                 y = self._padding.top + i * text_surface.get_height()
 
@@ -167,16 +170,20 @@ class Label:
         Resize the label.
 
         args:
-        w (int): the new_width of the label.
-        h (int): the new_height of the label.
+            w (int): the new_width of the label.
+            h (int): the new_height of the label.
         """
-        self.__init__(self.root_s,
-                      self._txt,
-                      self.rect,
-                      (w,h),
-                      self._bg,
-                      self._fg,
-                      self._border_color,
-                      self._border_size,
-                      self._padding,
-                      self._display)
+        self.__init__(root_surface=self.root_s,
+                      txt=self._txt,
+                      topleft=self.rect.topleft,
+                      topright=self.rect.topright,
+                      bottomleft=self.rect.bottomleft,
+                      bottomright=self.rect.bottomright,
+                      size=(w,h),
+                      bg=self._bg,
+                      fg=self._fg,
+                      border_color=self._border_color,
+                      border_size=self._border_size,
+                      padding=self._padding,
+                      display=self._display,
+                      text_align=self._align)

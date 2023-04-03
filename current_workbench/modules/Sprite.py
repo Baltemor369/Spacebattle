@@ -3,7 +3,7 @@ from typing import Union
 
 class Sprite(sprite.Sprite):
     """ This class is used for elements that can move on a surface. """
-    def __init__(self, path:str, velocity:float, coord:Union[tuple[float,float], Rect], display:bool=True) -> None:
+    def __init__(self, path:str, velocity:float, coord:Union[tuple[float,float], Rect], invicible_time:int, display:bool=True) -> None:
         """
         Initialize a new object of Sprite class.
 
@@ -20,6 +20,8 @@ class Sprite(sprite.Sprite):
         self.velocity = velocity
         self.rect = self.img.get_rect()
         self.collable = True
+        self.last_collision = 0
+        self.invicible_time = invicible_time
 
         if type(coord) == tuple:
             self.rect.x = coord[0]

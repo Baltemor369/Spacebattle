@@ -1,6 +1,8 @@
 import pygame
-import random 
-from modules.Spaceship import *
+import random
+import sys 
+from typing import List
+from modules.Spaceship import Spaceship
 from modules.Label import Label
 from modules.colors import RGB
 
@@ -36,16 +38,13 @@ class Spacebattle:
         
         # surface for the game
         self.game_surface = screen.subsurface(pygame.Rect(0,0,GAME_WIDTH,GAME_HEIGHT))
-        # self.game_surface.fill(RGB("dark navy"))
 
         # surface for score, menu, and other
         self.menu_surface = screen.subsurface(pygame.Rect(GAME_WIDTH,
                                                           0,
                                                           SCREEN_WIDTH-GAME_WIDTH,
-                                                          SCREEN_HEIGHT
-                                                          )
+                                                          SCREEN_HEIGHT)
                                               )
-        # self.menu_surface.fill(RGB("white"))
         
         # button "start"
         x = self.menu_surface.get_width() / 2 - 50 / 2
@@ -84,18 +83,21 @@ class Spacebattle:
                                  border_color=RGB("black"),
                                  border_size=2)
 
-        self.player = Spaceship(["assets/spaceship.png",
-                                ((GAME_WIDTH - SHIP_SIZE) / 2, GAME_HEIGHT - 100),
-                                100,
-                                2,
-                                800,
-                                8,
-                                PLAYER_DMG,
-                                1,
-                                True]
-                                )
+        self.player = Spaceship(path="assets/spaceship.png",
+                                coord=((GAME_WIDTH - SHIP_SIZE) / 2, GAME_HEIGHT - 100),
+                                hp=100,
+                                velocity=2,
+                                att_speed=800,
+                                att_velocity=8,
+                                damage=PLAYER_DMG,
+                                piercing=1,
+                                invicible_time=2000,
+                                display=True)
+        if self.player == -1:
+            print("Error: player cannot be initialized")
+            sys.exit()
 
-        self.player_stellor = 0
+        self.player_stellor = 10000
         self.difficuly = 1
 
         self.init_game()
@@ -120,21 +122,30 @@ class Spacebattle:
         # Player object
         self.player.set_pos(((GAME_WIDTH - SHIP_SIZE) / 2, GAME_HEIGHT - 100))
         self.player.HP = self.player.HP_max
+        self.player.collable = True
         self.player = Spaceship(self.player)
+        if self.player == -1:
+            print("Error: player cannot be initialized")
+            sys.exit()
 
         # list of ennemy objects
         self.ennemys:List[Spaceship] = []
         
-        self.boss = Spaceship(["assets/boss.png",
-                              (10, -BOSS_SIZE),
-                              self.next_stage,
-                              1,
-                              100,
-                              8,
-                              100,
-                              1,
-                              False]
-                              )
+        self.boss = Spaceship(path="assets/boss.png",
+                              coord=(10, -BOSS_SIZE),
+                              hp=self.next_stage,
+                              velocity=1,
+                              att_speed=100,
+                              att_velocity=8,
+                              damage=100,
+                              piercing=1,
+                              invicible_time=50,
+                              display=False)
+        
+        if self.boss == -1:
+            print("Error: boss cannot be initialized")
+            sys.exit()
+
         self.boss_life_bar = Label(root_surface=self.game_surface,
                                    txt="",
                                    topleft=(5,5),
@@ -162,39 +173,72 @@ class Spacebattle:
             
             if evt.type == pygame.QUIT:
                 self.runing_menu = False
-
-            if evt.type == pygame.MOUSEBUTTONDOWN:
+            
+            elif evt.type == pygame.KEYDOWN:
+                self.keypress_manager(evt)
                 
-                abs_offset = self.menu_surface.get_abs_offset()
-                relative_x = evt.pos[0] - abs_offset[0]
-                relative_y = evt.pos[1] - abs_offset[1]
+            elif evt.type == pygame.MOUSEBUTTONDOWN:
+                self.click_manager(evt)
 
-                if self.start_button.rect.collidepoint(relative_x, relative_y):
-                    self.run()
-                
-                if self.exit_button.rect.collidepoint(relative_x, relative_y):
-                        self.running = False
+    def keypress_manager(self, evt:pygame.event.Event):
+        """
+        Keypress manager
 
-                elif self.HP_up_B.rect.collidepoint(relative_x, relative_y):
+        args:
+            evt (pygame.event.Event): Event object from pygame 
+        """
+        if evt.key == pygame.K_ESCAPE:
+            self.runing_menu = False
+
+    def click_manager(self, evt:pygame.event.Event):
+        """
+        Click manager
+
+        args:
+            evt (pygame.event.Event): Event object from pygame
+        """
+        abs_offset = self.menu_surface.get_abs_offset()
+        relative_x = evt.pos[0] - abs_offset[0]
+        relative_y = evt.pos[1] - abs_offset[1]
+
+        if self.start_button.rect.collidepoint(relative_x, relative_y):
+            self.run()
+        
+        if self.exit_button.rect.collidepoint(relative_x, relative_y):
+                self.running = False
+
+        elif self.HP_up_B.rect.collidepoint(relative_x, relative_y):
+                if self.player_stellor >= self.lvl_hp * 1000:
+                    self.player_stellor -= self.lvl_hp * 1000
                     self.player.HP_upgrade()
 
-                elif self.velocity_up_B.rect.collidepoint(relative_x, relative_y):
-                    self.player.velocity_upgrade()
+        elif self.velocity_up_B.rect.collidepoint(relative_x, relative_y):
+            if self.player_stellor >= self.lvl_velocity * 1000:
+                self.player_stellor -= self.lvl_velocity * 1000
+                self.player.velocity_upgrade()
 
-                elif self.att_speed_up_B.rect.collidepoint(relative_x, relative_y):
-                    self.player.att_speed_upgrade()
+        elif self.att_speed_up_B.rect.collidepoint(relative_x, relative_y):
+            if self.player_stellor >= self.lvl_att_speed * 1000:
+                self.player_stellor -= self.lvl_att_speed * 1000
+                self.player.att_speed_upgrade()
 
-                elif self.att_velo_up_B.rect.collidepoint(relative_x, relative_y):
-                    self.player.att_velo_upgrade()
+        elif self.att_velo_up_B.rect.collidepoint(relative_x, relative_y):
+            if self.player_stellor >= self.lvl_att_velocity * 1000:
+                self.player_stellor -= self.lvl_att_velocity * 1000
+                self.player.att_velo_upgrade()
 
-                elif self.att_up_B.rect.collidepoint(relative_x, relative_y):
-                    self.player.damage_upgrade()
-                    
-                elif self.piercing_up_B.rect.collidepoint(relative_x, relative_y):
-                    self.player.piercing_upgrade()
-                
-                if self.exit_button.rect.collidepoint(relative_x, relative_y):
-                    self.runing_menu = False
+        elif self.att_up_B.rect.collidepoint(relative_x, relative_y):
+            if self.player_stellor >= self.lvl_damage * 1000:
+                self.player_stellor -= self.lvl_damage * 1000
+                self.player.damage_upgrade()
+            
+        elif self.piercing_up_B.rect.collidepoint(relative_x, relative_y):
+            if self.player_stellor >= self.lvl_piercing * 1000:
+                self.player_stellor -= self.lvl_piercing * 1000
+                self.player.piercing_upgrade()
+        
+        if self.exit_button.rect.collidepoint(relative_x, relative_y):
+            self.runing_menu = False
 
     def menu_display(self):
         self.menu_surface.fill(RGB("white"))
@@ -213,7 +257,7 @@ class Spacebattle:
                         padding=(5,5,5,5))
         self.menu_surface.blit(stellor.surface, stellor.rect)
 
-        self.skill_menu(self.menu_surface)
+        self.skill_menu()
 
         self.menu_surface.blit(self.param_button.surface, self.param_button.rect)
 
@@ -230,7 +274,7 @@ class Spacebattle:
                 self.running = False
                 self.runing_menu = False
             
-            if evt.type == pygame.MOUSEBUTTONDOWN:
+            elif evt.type == pygame.MOUSEBUTTONDOWN:
                     abs_offset = self.menu_surface.get_abs_offset()
                     relative_x = evt.pos[0] - abs_offset[0]
                     relative_y = evt.pos[1] - abs_offset[1]
@@ -239,25 +283,37 @@ class Spacebattle:
                         self.running = False
 
                     elif self.HP_up_B.rect.collidepoint(relative_x, relative_y):
-                        self.player.HP_upgrade()
+                        if self.player_stellor >= self.lvl_hp * 1000:
+                            self.player_stellor -= self.lvl_hp * 1000
+                            self.player.HP_upgrade()
 
                     elif self.velocity_up_B.rect.collidepoint(relative_x, relative_y):
-                        self.player.velocity_upgrade()
+                        if self.player_stellor >= self.lvl_velocity * 1000:
+                            self.player_stellor -= self.lvl_velocity * 1000
+                            self.player.velocity_upgrade()
 
                     elif self.att_speed_up_B.rect.collidepoint(relative_x, relative_y):
-                        self.player.att_speed_upgrade()
+                        if self.player_stellor >= self.lvl_att_speed * 1000:
+                            self.player_stellor -= self.lvl_att_speed * 1000
+                            self.player.att_speed_upgrade()
 
                     elif self.att_velo_up_B.rect.collidepoint(relative_x, relative_y):
-                        self.player.att_velo_upgrade()
+                        if self.player_stellor >= self.lvl_att_velocity * 1000:
+                            self.player_stellor -= self.lvl_att_velocity * 1000
+                            self.player.att_velo_upgrade()
 
                     elif self.att_up_B.rect.collidepoint(relative_x, relative_y):
-                        self.player.damage_upgrade()
+                        if self.player_stellor >= self.lvl_damage * 1000:
+                            self.player_stellor -= self.lvl_damage * 1000
+                            self.player.damage_upgrade()
                         
                     elif self.piercing_up_B.rect.collidepoint(relative_x, relative_y):
-                        self.player.piercing_upgrade()
+                        if self.player_stellor >= self.lvl_piercing * 1000:
+                            self.player_stellor -= self.lvl_piercing * 1000
+                            self.player.piercing_upgrade()
 
 
-            if evt.type == pygame.KEYDOWN:
+            elif evt.type == pygame.KEYDOWN:
 
                 if evt.key == pygame.K_ESCAPE:
                     self.pause = not self.pause
@@ -322,10 +378,13 @@ class Spacebattle:
             # boss move
             if self.boss.rect.y < 10:
                 self.boss.move_down()
+            if pygame.time.get_ticks() - self.boss.last_collision >= self.boss.invicible_time:
+                self.boss.collable = True
 
             # player & boss collision
-            if self.boss.rect.colliderect(self.player.rect):
-                self.running = False
+            if self.boss.rect.colliderect(self.player.rect) and self.boss.collable:
+                self.boss.take_damage(self.player.damage)
+                self.player.take_damage(self.boss.damage)
             
             # boss fire
 
@@ -339,7 +398,8 @@ class Spacebattle:
                 continue
             
             # manage collision player-ennemys
-            if self.player.rect.colliderect(elt.rect):
+            print(self.player.rect.colliderect(elt.rect), self.player.collable)
+            if self.player.rect.colliderect(elt.rect) and self.player.collable:
                 self.player.take_damage(elt.HP_max)
 
         # torpedo move managements
@@ -355,7 +415,7 @@ class Spacebattle:
             for ennemy in self.ennemys:
                 
                 # collision
-                if ennemy.rect.colliderect(elt.rect):
+                if ennemy.rect.colliderect(elt.rect) and ennemy.collable and elt.collable:
                     
                     # if missile can do damage
                     if elt.piercing > 0:
@@ -430,7 +490,7 @@ class Spacebattle:
         score_text = self.font.render(f"debris : {self.score}",True, RGB("black"))
         self.menu_surface.blit(score_text,((MENU_WIDTH-score_text.get_width())/2,10))
 
-        self.skill_menu(self.menu_surface)
+        self.skill_menu()
 
         self.menu_surface.blit(self.exit_button.surface, self.exit_button.rect)
 
@@ -455,56 +515,65 @@ class Spacebattle:
         self.player_stellor += int(self.score / 2)
     
     def ennemy_spawn(self):
-        buffer_ennemy = Spaceship(["assets/ennemy.png",
-                              (self.player.rect.x, -SHIP_SIZE),
-                               100,
-                              3,
-                              100,
-                              5,
-                              100,
-                              1,
-                              True]
-                              )
+        buffer_ennemy = Spaceship(path="assets/ennemy.png",
+                              coord=(self.player.rect.x, -SHIP_SIZE),
+                              hp=100,
+                              velocity=3,
+                              att_speed=1200,
+                              att_velocity=5,
+                              damage=100,
+                              piercing=1,
+                              invicible_time=0,
+                              display=True)
+        if buffer_ennemy == -1:
+            print("Error: buffer_ennemy cannot be initialized")
+            sys.exit()
         
         for i in range(random.randrange(4,6)):
             
-            buffer_ennemy = Spaceship(["assets/ennemy.png",
-                                  (random.randrange(0,GAME_WIDTH-SHIP_SIZE), -SHIP_SIZE),
-                                  100,
-                                  3,
-                                  100,
-                                  5,
-                                  100,
-                                  1,
-                                  True]
-                                  )
+            buffer_ennemy = Spaceship(path="assets/ennemy.png",
+                                  coord=(random.randrange(0,GAME_WIDTH-SHIP_SIZE), -SHIP_SIZE),
+                                  hp=100,
+                                  velocity=3,
+                                  att_speed=1000,
+                                  att_velocity=5,
+                                  damage=100,
+                                  piercing=1,
+                                  invicible_time=0,
+                                  display=True)
+            if buffer_ennemy == -1:
+                print("Error: buffer_ennemy cannot be initialized")
+                sys.exit()
             
             index = 0
             while index < len(self.ennemys):
                 while buffer_ennemy.rect.colliderect(self.ennemys[index].rect):
-                    buffer_ennemy = Spaceship(["assets/ennemy.png",
-                                            (random.randrange(0,GAME_WIDTH-SHIP_SIZE), -SHIP_SIZE),
-                                            100,
-                                            3,
-                                            100,
-                                            5,
-                                            100,
-                                            1,
-                                            True]
-                                            )
+                    buffer_ennemy = Spaceship(path="assets/ennemy.png",
+                                            coord=(random.randrange(0,GAME_WIDTH-SHIP_SIZE), -SHIP_SIZE),
+                                            hp=100,
+                                            velocity=3,
+                                            att_speed=100,
+                                            att_velocity=5,
+                                            damage=100,
+                                            piercing=1,
+                                            invicible_time=0,
+                                            display=True)
+                    if buffer_ennemy == -1:
+                        print("Error: buffer_ennemy cannot be initialized")
+                        sys.exit()
                     index = 0
                 index += 1
             self.ennemys.append(buffer_ennemy)
 
-    def skill_menu(self, surface:pygame.Surface):
+    def skill_menu(self):
         button_x = MENU_WIDTH - 30
         button_y = 120
-        label_x = 40
+        label_x = 20
 
         # skills div
-        lvl = (self.player.HP_max - 100) // Spaceship.HP_bonus + 1
+        self.lvl_hp = (self.player.HP_max - 100) // Spaceship.HP_bonus + 1
         HP_label = Label(root_surface=self.menu_surface,
-                         txt=f"HP max, lvl {lvl}\n{lvl * 1000} Stellor",
+                         txt=f"{self.player.HP_max} HP max, lvl {self.lvl_hp}\n{self.lvl_hp * 1000} Stellor",
                          topleft=(label_x,button_y),
                          border_color=None)
         
@@ -516,10 +585,10 @@ class Spacebattle:
                            fg=RGB("black"))
 
         button_y += 50
-        lvl = (self.player.velocity - 2) // Spaceship.velocity_bonus + 1
+        self.lvl_velocity = (self.player.velocity - 2) // Spaceship.velocity_bonus + 1
         velocity_label = Label(root_surface=self.menu_surface,
                             topleft=(label_x, button_y),
-                            txt=f"Speed, lvl {lvl}\n{lvl * 1000} Stellor",
+                            txt=f"{self.player.velocity} Speed, lvl {self.lvl_velocity}\n{self.lvl_velocity * 1000} Stellor",
                           border_color=None)
         
         self.velocity_up_B = Label(root_surface=self.menu_surface,
@@ -530,10 +599,10 @@ class Spacebattle:
                            fg=RGB("black"))
 
         button_y += 50
-        lvl = (self.player.att_speed - 800) // Spaceship.att_speed_bonus + 1
+        self.lvl_att_speed = (self.player.att_speed - 800) // Spaceship.att_speed_bonus + 1
         att_speed_label = Label(root_surface=self.menu_surface,
                                 topleft=(label_x, button_y),
-                                txt=f"Speed Att, lvl {lvl}\n{lvl * 1000} Stellor",
+                                txt=f"{self.player.att_speed} Speed Att, lvl {self.lvl_att_speed}\n{self.lvl_att_speed * 1000} Stellor",
                                 border_color=None)
         
         self.att_speed_up_B = Label(root_surface=self.menu_surface,
@@ -544,10 +613,10 @@ class Spacebattle:
                                     fg=RGB("black"))
 
         button_y += 50
-        lvl = (self.player.att_velocity - 8) // Spaceship.att_velocity_bonus + 1
-        att_velo_label = Label(root_surface=self.menu_surface,
+        self.lvl_att_velocity = (self.player.att_velocity - 8) // Spaceship.att_velocity_bonus + 1
+        att_velocity_label = Label(root_surface=self.menu_surface,
                                topleft=(label_x, button_y),
-                               txt=f"Velocity Att, lvl {lvl}\n{lvl * 1000} Stellor",
+                               txt=f"{self.player.att_velocity} Velocity Att, lvl {self.lvl_att_velocity}\n{self.lvl_att_velocity * 1000} Stellor",
                                border_color=None)
         
         self.att_velo_up_B = Label(root_surface=self.menu_surface,
@@ -558,10 +627,10 @@ class Spacebattle:
                            fg=RGB("black"))
 
         button_y += 50
-        lvl = (self.player.damage - 100) // Spaceship.damage_bonus + 1
-        att_label = Label(root_surface=self.menu_surface,
+        self.lvl_damage = (self.player.damage - 100) // Spaceship.damage_bonus + 1
+        damage_label = Label(root_surface=self.menu_surface,
                           topleft=(label_x, button_y),
-                          txt=f"Damage, lvl {lvl}\n{lvl * 1000} Stellor",
+                          txt=f"{self.player.damage} Damage, lvl {self.lvl_damage}\n{self.lvl_damage * 1000} Stellor",
                           border_color=None)
         
         self.att_up_B = Label(root_surface=self.menu_surface,
@@ -572,10 +641,10 @@ class Spacebattle:
                            fg=RGB("black"))
 
         button_y += 50
-        lvl = (self.player.piercing - 1) // Spaceship.piercing_bonus + 1
+        self.lvl_piercing = (self.player.piercing - 1) // Spaceship.piercing_bonus + 1
         piercing_label = Label(root_surface=self.menu_surface,
                                topleft=(label_x, button_y),
-                               txt=f"Piercing, lvl {lvl}\n{lvl * 1000} Stellor",
+                               txt=f"{self.player.piercing} Piercing, lvl {self.lvl_piercing}\n{self.lvl_piercing * 1000} Stellor",
                                border_color=None)
         
         self.piercing_up_B = Label(root_surface=self.menu_surface,
@@ -588,8 +657,8 @@ class Spacebattle:
         HP_label.draw()
         velocity_label.draw()
         att_speed_label.draw()
-        att_velo_label.draw()
-        att_label.draw()
+        att_velocity_label.draw()
+        damage_label.draw()
         piercing_label.draw()
 
         self.HP_up_B.draw()

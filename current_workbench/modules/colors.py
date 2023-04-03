@@ -41,6 +41,7 @@ colors = {
     'greenyellow': (173, 255, 47),
 }
 
+
 def RGB(color_str: str) -> tuple[int, int, int]:
     """
     Convert a color name in a RGB code.
@@ -49,7 +50,7 @@ def RGB(color_str: str) -> tuple[int, int, int]:
         color_str (str): a string represent the color name.
 
     Returns:
-        Tuple[int, int, int]:  a tuple of integer corresponding to the color
+        tuple:  a tuple of integer corresponding to the color
     """
 
     color_str = color_str.lower()
@@ -79,11 +80,11 @@ def adjust_brightness(color:tuple[int,int,int],brightness:int) -> tuple[int,int,
     Adjust the brightness of a color.
 
     Args:
-    color (tuple[int,int,int]): a tuple of integer corresponding to the color.
-    brightness (int): the brightness to adjust.
+        color (tuple[int,int,int]): a tuple of integer corresponding to the color.
+        brightness (int): the brightness to adjust.
 
     Returns:
-    tuple[int,int,int]: a tuple of integer corresponding to the adjusted color.
+        tuple[int,int,int]: a tuple of integer corresponding to the adjusted color.
     """
     r,g,b = color
     new_r = 0
