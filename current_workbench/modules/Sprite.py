@@ -1,28 +1,87 @@
-import pygame
+from pygame import Rect, image, sprite, display as pg_display
+from typing import Union
 
-class Sprite(pygame.sprite.Sprite):
-    def __init__(self, path:str, velocity:float, x:int, y:int) -> None:
+class Sprite(sprite.Sprite):
+    """ This class is used for elements that can move on a surface. """
+    # pictures already loaded, shared by all sprites: avoids reading the disk at each shot or spawn
+    _images = {}
+
+    def __init__(self, path:str, velocity:float, coord:Union[tuple[float,float], Rect], invicible_time:int, display:bool=True) -> None:
+        """
+        Initialize a new object of Sprite class.
+
+        args:
+            path (str): access path to the image of the sprite
+            velocity (int): the speed of the sprite
+            coord (tuple | Rect): the position of the sprite on the surface, tuple(x,y) or a pygame.Rect.
+            display (bool): if the sprite should be displayed
+        """
         super().__init__()
-        self.img = pygame.image.load(path)
-        self.display = True
-        self.collable_allowed = True
-
-        self.rect = self.img.get_rect()
-        self.rect.x = x
-        self.rect.y = y
         
-        # Skills var 
+        self.img = Sprite.load_image(path)
+        self.display = display
         self.velocity = velocity
+        self.rect = self.img.get_rect()
+        self.collable = True
+        self.last_collision = 0
+        self.invicible_time = invicible_time
 
-    def move_up(self):
+        if type(coord) == tuple:
+            self.rect.x = coord[0]
+            self.rect.y = coord[1]
+            
+        elif isinstance(coord, Rect):
+            self.rect.x = coord.x
+            self.rect.y = coord.y
+
+    @staticmethod
+    def load_image(path:str):
+        """
+        Loads a picture once, then returns the same Surface for every sprite using it.
+
+        args:
+            path (str): access path to the image.
+        """
+        if path not in Sprite._images:
+            img = image.load(path)
+            # convert to the screen pixel format: much faster to blit
+            if pg_display.get_surface() is not None:
+                img = img.convert_alpha()
+            Sprite._images[path] = img
+        return Sprite._images[path]
+
+    def move_up(self) -> None:
+        """ Move the sprite up. """
         self.rect.y -= self.velocity
-    def move_down(self):
+    def move_down(self) -> None:
+        """ Move the sprite down. """
         self.rect.y += self.velocity
-    def move_left(self):
+    def move_left(self) -> None:
+        """ Move the sprite left. """
         self.rect.x -= self.velocity
-    def move_right(self):
+    def move_right(self) -> None:
+        """ Move the sprite right. """
         self.rect.x += self.velocity
     
-    def set_pos(self, x:int, y:int):
-        self.rect.x = x
-        self.rect.y = y
+    def set_pos(self, pos:Union[tuple[float,float],Rect]) -> None:
+        """ 
+        Set the position of the sprite. 
+
+        args:
+            pos (tuple | Rect): the position of the sprite on the surface, tuple(x,y) or a pygame.Rect Object.
+        """
+        if type(pos) == tuple:
+            self.rect.x = pos[0]
+            self.rect.y = pos[1]
+        else:
+            self.rect.x = pos.x
+            self.rect.y = pos.y
+
+    def get_pos(self) -> tuple[float, float]:
+        """
+        Get the position of the sprite.
+
+        returns:
+            tuple: the position of the sprite on the surface, tuple(x,y)
+        """
+        return (self.rect.x, self.rect.y)
